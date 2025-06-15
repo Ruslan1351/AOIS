@@ -1,16 +1,13 @@
 import sys
 from pathlib import Path
 import math
-from itertools import permutations
+from itertools import combinations
 
 
 lab2_path = str(Path(__file__).parent.parent / "lab2")
 sys.path.append(lab2_path)
 
 import functions as f
-
-
-
 
 def to_index_form(snf, number_of_vars):
     index_form, index_subform, i = dict(), [], 0
@@ -39,7 +36,7 @@ def can_glue(term1, term2, number_of_vars):
     else:
         return []
 
-def glue_terms(index_form, number_of_vars):  #[[1, 1, 0]: True, [1, 0, 0]: False, [0, 1, 0]: True]
+def glue_terms(index_form, number_of_vars):
     result_keys = list()
     index_form_keys = list(index_form.keys())
     for i in range(len(index_form)):
@@ -57,31 +54,6 @@ def glue_terms(index_form, number_of_vars):  #[[1, 1, 0]: True, [1, 0, 0]: False
         if index_form[term] == False:
             result[term] = False
     return result
-
-def true_table(log_func, vals):
-    variables = list()
-    repeat_variables = list()
-    for i in log_func:
-        if i in 'abcde' and i not in variables:
-            variables.append(i)
-        if i in 'abcde':
-            repeat_variables.append(i)
-    postf_func = f.transformation(log_func)
-    true_table = list()
-    for i in range(0, 2**len(variables)):
-        table_row = dict.fromkeys(variables)
-        values = f.to_binary_system(i, len(variables))
-        for j in range(0, len(variables)):
-            if variables[j] in vals.keys():
-                table_row[variables[j]] = vals[variables[j]]
-            else:
-                table_row[variables[j]] = values[j]
-        values = []
-        for j in range(0, len(repeat_variables)):
-            values.append(table_row[repeat_variables[j]])
-        table_row.update({log_func: f.calculating(postf_func, values)})
-        true_table.append(table_row)
-    return true_table
 
 def from_index_to_snf(what_snf: str, index_form, vars):
     snf = []
@@ -120,79 +92,6 @@ def glue_snf(what_snf: str, snf, vars):
             break
         glued_snf = from_index_to_snf(what_snf, index_form, vars)
     return glued_snf
-
-def calc_is_implicant_extra(what_snf, glued_snf, implicant):
-    if what_snf == 'sknf':
-        implicants = glued_snf.split('&')
-    else:
-        implicants = glued_snf.split('|')
-    implic = implicant[1:-1]
-    if what_snf == 'sknf':
-        vars = implic.split('|')
-    else:
-        vars = implic.split('&')
-    values = dict()
-    for var in vars:
-        if var[0] == '!':
-            if what_snf == 'sknf':
-                values[var[1]] = 1
-            else:
-                values[var[1]] = 0
-        else:
-            if what_snf == 'sknf':
-                values[var[0]] = 0
-            else:
-                values[var[0]] = 1
-    other_func = []
-    for impl in implicants:
-        if impl != implicant:
-            other_func.append(impl)
-            if what_snf == 'sknf':
-                other_func.append('&')
-            else:
-                other_func.append('|')
-    if other_func:
-        other_func.pop(-1)
-    other_func = ''.join(other_func)
-    tr_table = true_table(other_func, values)
-    is_extra = False
-    for row in tr_table:
-        if what_snf == 'sknf':
-            if row[other_func] == 0:
-                is_extra = True
-            else:
-                is_extra = False
-                break
-        else:
-            if row[other_func] == 1:
-                is_extra = True
-            else:
-                is_extra = False
-                break
-    if is_extra:
-        return True
-    else:
-        return False
-
-def delete_subsnf(snf, subsnf):
-    index = snf.index(subsnf)
-    if index == 0:
-        return snf[len(subsnf) + 1:]
-    if index + len(subsnf) == len(snf):
-        return snf[:index - 1]
-    else:
-        return snf[:index - 1] + snf[index + len(subsnf):]
-
-def calc_check_implic_snf(what_snf: str, glued_snf, implicants):
-    if len(implicants) == 1:
-        return [], implicants
-    extra_implicants = list()
-    new_glued_snf = glued_snf[:]
-    for i in range(len(implicants)):
-        if calc_is_implicant_extra(what_snf, new_glued_snf, implicants[i]):
-            new_glued_snf = delete_subsnf(new_glued_snf, implicants[i])
-            extra_implicants.append(implicants[i])
-    return extra_implicants
 
 def create_minim_table(what_snf, snf, glued_snf):
     if what_snf == 'sknf':
@@ -363,8 +262,7 @@ def find_groups(map_karno, what_snf):
                 if map_karno[ri][cj] != target:
                     return False
         return True
-
-    # генерируем все возможные группы
+    
     pow2_heights = [2 ** i for i in range(int(math.log2(rows)) + 1)][::-1]
     pow2_widths = [2 ** i for i in range(int(math.log2(cols)) + 1)][::-1]
     for h in pow2_heights:
@@ -373,10 +271,7 @@ def find_groups(map_karno, what_snf):
                 for c in range(cols):
                     if is_valid_group(r, c, h, w):
                         all_groups.append((r, c, h, w))
-
-    # сортировка: большие группы — приоритетнее
     all_groups.sort(key=lambda g: -(g[2] * g[3]))
-
     used = [[False] * cols for _ in range(rows)]
     final_groups = []
 
@@ -384,14 +279,12 @@ def find_groups(map_karno, what_snf):
         r, c, h, w = g
         return {( (r + i) % rows, (c + j) % cols ) for i in range(h) for j in range(w)}
 
-    # выбираем непересекающиеся группы
     covered = set()
     for g in all_groups:
         cells = group_cells(g)
         if not cells & covered:
             final_groups.append(g)
             covered |= cells
-
     return final_groups
 
 
@@ -423,74 +316,68 @@ def table_find_implic_snf(what_snf, map_karno, hor_values, vert_values, vars):
         implics.append(implic)
     return implics
 
-def find_minim_snf_from_all_snf(all_snf):
-    keys = list(all_snf.keys())
-    min = all_snf[keys[0]]
-    minim_snf = keys[0]
-    for key in keys:
-        if all_snf[key] < min:
-            min = all_snf[key]
-            minim_snf = key
-    return minim_snf
-
 def create_new_table(table, implicants, new_implicants):
     new_table = []
-    for i in range(len(implicants)):
-        index = implicants.index(new_implicants[i])
-        new_table.append(table[index])
+    for implicant in new_implicants:
+        if implicant in implicants:
+            index = implicants.index(implicant)
+            new_table.append(table[index])
     return new_table
 
+def is_equivalent(what_snf, expr1, expr2):
+    table1, vars1 = f.build_true_table(expr1)
+    table2, vars2 = f.build_true_table(expr2)
+    all_vars = sorted(set(vars1) | set(vars2))
+    def pad_expression(expr, vars_expr, all_vars):
+        missing = set(all_vars) - set(vars_expr)
+        if not missing:
+            return expr
+        if what_snf == 'sdnf':
+            for v in missing:
+                expr += f'&({v}|!{v})'
+        elif what_snf == 'sknf':
+            for v in missing:
+                expr += f'|({v}&!{v})'
+        return expr
+    padded_expr1 = pad_expression(expr1, vars1, all_vars)
+    padded_expr2 = pad_expression(expr2, vars2, all_vars)
+    table1, _ = f.build_true_table(padded_expr1)
+    table2, _ = f.build_true_table(padded_expr2)
+    for row1, row2 in zip(table1, table2):
+        val1 = list(row1.values())[-1]
+        val2 = list(row2.values())[-1]
+        if val1 != val2:
+            return False
+    return True
 
 def calc_minim_snf(what_snf, snf):
     if what_snf == 'sknf':
         implicants = snf.split('&')
-    if what_snf == 'sdnf':
+        separator = '&'
+    elif what_snf == 'sdnf':
         implicants = snf.split('|')
-    all_implicants = [list(p) for p in permutations(implicants)]
-    all_minim_snf = {}
-    for i in range(len(all_implicants)):
-        implicants = all_implicants[i]
-        extra_implicants = calc_check_implic_snf(what_snf, snf, implicants)
-        minim_snf = ''
-        for implicant in implicants:
-            if implicant not in extra_implicants:
-                minim_snf += implicant
-                if what_snf == 'sknf':
-                    minim_snf += '&'
-                else:
-                    minim_snf += '|'
-        minim_snf = minim_snf[:-1]
-        if what_snf == 'sknf':
-            impls = minim_snf.split('&')
-        if what_snf == 'sdnf':
-            impls = minim_snf.split('|')
-        all_minim_snf[minim_snf] = len(impls)
-    return find_minim_snf_from_all_snf(all_minim_snf)
+        separator = '|'
+    for r in range(1, len(implicants) + 1):
+        for subset in combinations(implicants, r):
+            expr = separator.join(subset)
+            if is_equivalent(what_snf, snf, expr):
+                return expr
+    return snf
 
+def calc_table_minim_snf(what_snf, snf, table, implicants):
+    separator = '&' if what_snf == 'sknf' else '|'
+    for r in range(1, len(implicants) + 1):
+        for subset in combinations(implicants, r):
+            subset = list(subset)
+            new_table = create_new_table(table, implicants, subset)
+            extra_implicants = calc_table_check_implic_snf(new_table, subset)
+            if extra_implicants:
+                continue
+            new_expr = separator.join(subset)
+            if is_equivalent(what_snf, snf, new_expr):
+                return new_expr
+    return separator.join(implicants)
 
-
-def calc_table_minim_snf(what_snf, table, implicants):
-    all_implicants = [list(p) for p in permutations(implicants)]
-    all_minim_snf = {}
-    for i in range(len(all_implicants)):
-        new_implicants = all_implicants[i]
-        new_table = create_new_table(table, implicants, new_implicants)
-        extra_implicants = calc_table_check_implic_snf(new_table, new_implicants)
-        minim_snf = ''
-        for implicant in new_implicants:
-            if implicant not in extra_implicants:
-                minim_snf += implicant
-                if what_snf == 'sknf':
-                    minim_snf += '&'
-                else:
-                    minim_snf += '|'
-        minim_snf = minim_snf[:-1]
-        if what_snf == 'sknf':
-            impls = minim_snf.split('&')
-        if what_snf == 'sdnf':
-            impls = minim_snf.split('|')
-        all_minim_snf[minim_snf] = len(impls)
-    return find_minim_snf_from_all_snf(all_minim_snf)
 
 def table_minim_snf(what_snf, map_karno, hor_values, vert_values, vars):
     implicants = table_find_implic_snf(what_snf, map_karno, hor_values, vert_values, vars)
